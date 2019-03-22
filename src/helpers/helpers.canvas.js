@@ -2,17 +2,10 @@
 
 var helpers = require('./helpers.core');
 
-var PI = Math.PI;
-var RAD_PER_DEG = PI / 180;
-var DOUBLE_PI = PI * 2;
-var HALF_PI = PI / 2;
-var QUARTER_PI = PI / 4;
-var TWO_THIRDS_PI = PI * 2 / 3;
-
 /**
  * @namespace Chart.helpers.canvas
  */
-var exports = {
+var exports = module.exports = {
 	/**
 	 * Clears the entire canvas associated to the given `chart`.
 	 * @param {Chart} chart - The chart for which to clear the canvas.
@@ -25,37 +18,29 @@ var exports = {
 	 * Creates a "path" for a rectangle with rounded corners at position (x, y) with a
 	 * given size (width, height) and the same `radius` for all corners.
 	 * @param {CanvasRenderingContext2D} ctx - The canvas 2D Context.
-	 * @param {number} x - The x axis of the coordinate for the rectangle starting point.
-	 * @param {number} y - The y axis of the coordinate for the rectangle starting point.
-	 * @param {number} width - The rectangle's width.
-	 * @param {number} height - The rectangle's height.
-	 * @param {number} radius - The rounded amount (in pixels) for the four corners.
+	 * @param {Number} x - The x axis of the coordinate for the rectangle starting point.
+	 * @param {Number} y - The y axis of the coordinate for the rectangle starting point.
+	 * @param {Number} width - The rectangle's width.
+	 * @param {Number} height - The rectangle's height.
+	 * @param {Number} radius - The rounded amount (in pixels) for the four corners.
 	 * @todo handle `radius` as top-left, top-right, bottom-right, bottom-left array/object?
 	 */
 	roundedRect: function(ctx, x, y, width, height, radius) {
 		if (radius) {
-			var r = Math.min(radius, height / 2, width / 2);
-			var left = x + r;
-			var top = y + r;
-			var right = x + width - r;
-			var bottom = y + height - r;
+			// NOTE(SB) `epsilon` helps to prevent minor artifacts appearing
+			// on Chrome when `r` is exactly half the height or the width.
+			var epsilon = 0.0000001;
+			var r = Math.min(radius, (height / 2) - epsilon, (width / 2) - epsilon);
 
-			ctx.moveTo(x, top);
-			if (left < right && top < bottom) {
-				ctx.arc(left, top, r, -PI, -HALF_PI);
-				ctx.arc(right, top, r, -HALF_PI, 0);
-				ctx.arc(right, bottom, r, 0, HALF_PI);
-				ctx.arc(left, bottom, r, HALF_PI, PI);
-			} else if (left < right) {
-				ctx.moveTo(left, y);
-				ctx.arc(right, top, r, -HALF_PI, HALF_PI);
-				ctx.arc(left, top, r, HALF_PI, PI + HALF_PI);
-			} else if (top < bottom) {
-				ctx.arc(left, top, r, -PI, 0);
-				ctx.arc(left, bottom, r, 0, PI);
-			} else {
-				ctx.arc(left, top, r, -PI, PI);
-			}
+			ctx.moveTo(x + r, y);
+			ctx.lineTo(x + width - r, y);
+			ctx.arcTo(x + width, y, x + width, y + r, r);
+			ctx.lineTo(x + width, y + height - r);
+			ctx.arcTo(x + width, y + height, x + width - r, y + height, r);
+			ctx.lineTo(x + r, y + height);
+			ctx.arcTo(x, y + height, x, y + height - r, r);
+			ctx.lineTo(x, y + r);
+			ctx.arcTo(x, y, x + r, y, r);
 			ctx.closePath();
 			ctx.moveTo(x, y);
 		} else {
@@ -64,8 +49,8 @@ var exports = {
 	},
 
 	drawPoint: function(ctx, style, radius, x, y, rotation) {
-		var type, xOffset, yOffset, size, cornerRadius;
-		var rad = (rotation || 0) * RAD_PER_DEG;
+		var type, edgeLength, xOffset, yOffset, height, size;
+		rotation = rotation || 0;
 
 		if (style && typeof style === 'object') {
 			type = style.toString();
@@ -79,111 +64,88 @@ var exports = {
 			return;
 		}
 
+		ctx.save();
+		ctx.translate(x, y);
+		ctx.rotate(rotation * Math.PI / 180);
 		ctx.beginPath();
 
 		switch (style) {
 		// Default includes circle
 		default:
-			ctx.arc(x, y, radius, 0, DOUBLE_PI);
+			ctx.arc(0, 0, radius, 0, Math.PI * 2);
 			ctx.closePath();
 			break;
 		case 'triangle':
-			ctx.moveTo(x + Math.sin(rad) * radius, y - Math.cos(rad) * radius);
-			rad += TWO_THIRDS_PI;
-			ctx.lineTo(x + Math.sin(rad) * radius, y - Math.cos(rad) * radius);
-			rad += TWO_THIRDS_PI;
-			ctx.lineTo(x + Math.sin(rad) * radius, y - Math.cos(rad) * radius);
-			ctx.closePath();
-			break;
-		case 'rectRounded':
-			// NOTE: the rounded rect implementation changed to use `arc` instead of
-			// `quadraticCurveTo` since it generates better results when rect is
-			// almost a circle. 0.516 (instead of 0.5) produces results with visually
-			// closer proportion to the previous impl and it is inscribed in the
-			// circle with `radius`. For more details, see the following PRs:
-			// https://github.com/chartjs/Chart.js/issues/5597
-			// https://github.com/chartjs/Chart.js/issues/5858
-			cornerRadius = radius * 0.516;
-			size = radius - cornerRadius;
-			xOffset = Math.cos(rad + QUARTER_PI) * size;
-			yOffset = Math.sin(rad + QUARTER_PI) * size;
-			ctx.arc(x - xOffset, y - yOffset, cornerRadius, rad - PI, rad - HALF_PI);
-			ctx.arc(x + yOffset, y - xOffset, cornerRadius, rad - HALF_PI, rad);
-			ctx.arc(x + xOffset, y + yOffset, cornerRadius, rad, rad + HALF_PI);
-			ctx.arc(x - yOffset, y + xOffset, cornerRadius, rad + HALF_PI, rad + PI);
+			edgeLength = 3 * radius / Math.sqrt(3);
+			height = edgeLength * Math.sqrt(3) / 2;
+			ctx.moveTo(-edgeLength / 2, height / 3);
+			ctx.lineTo(edgeLength / 2, height / 3);
+			ctx.lineTo(0, -2 * height / 3);
 			ctx.closePath();
 			break;
 		case 'rect':
-			if (!rotation) {
-				size = Math.SQRT1_2 * radius;
-				ctx.rect(x - size, y - size, 2 * size, 2 * size);
-				break;
-			}
-			rad += QUARTER_PI;
-			/* falls through */
+			size = 1 / Math.SQRT2 * radius;
+			ctx.rect(-size, -size, 2 * size, 2 * size);
+			break;
+		case 'rectRounded':
+			var offset = radius / Math.SQRT2;
+			var leftX = -offset;
+			var topY = -offset;
+			var sideSize = Math.SQRT2 * radius;
+
+			// NOTE(SB) the rounded rect implementation changed to use `arcTo`
+			// instead of `quadraticCurveTo` since it generates better results
+			// when rect is almost a circle. 0.425 (instead of 0.5) produces
+			// results visually closer to the previous impl.
+			this.roundedRect(ctx, leftX, topY, sideSize, sideSize, radius * 0.425);
+			break;
 		case 'rectRot':
-			xOffset = Math.cos(rad) * radius;
-			yOffset = Math.sin(rad) * radius;
-			ctx.moveTo(x - xOffset, y - yOffset);
-			ctx.lineTo(x + yOffset, y - xOffset);
-			ctx.lineTo(x + xOffset, y + yOffset);
-			ctx.lineTo(x - yOffset, y + xOffset);
+			size = 1 / Math.SQRT2 * radius;
+			ctx.moveTo(-size, 0);
+			ctx.lineTo(0, size);
+			ctx.lineTo(size, 0);
+			ctx.lineTo(0, -size);
 			ctx.closePath();
 			break;
-		case 'crossRot':
-			rad += QUARTER_PI;
-			/* falls through */
 		case 'cross':
-			xOffset = Math.cos(rad) * radius;
-			yOffset = Math.sin(rad) * radius;
-			ctx.moveTo(x - xOffset, y - yOffset);
-			ctx.lineTo(x + xOffset, y + yOffset);
-			ctx.moveTo(x + yOffset, y - xOffset);
-			ctx.lineTo(x - yOffset, y + xOffset);
+			ctx.moveTo(0, radius);
+			ctx.lineTo(0, -radius);
+			ctx.moveTo(-radius, 0);
+			ctx.lineTo(radius, 0);
+			break;
+		case 'crossRot':
+			xOffset = Math.cos(Math.PI / 4) * radius;
+			yOffset = Math.sin(Math.PI / 4) * radius;
+			ctx.moveTo(-xOffset, -yOffset);
+			ctx.lineTo(xOffset, yOffset);
+			ctx.moveTo(-xOffset, yOffset);
+			ctx.lineTo(xOffset, -yOffset);
 			break;
 		case 'star':
-			xOffset = Math.cos(rad) * radius;
-			yOffset = Math.sin(rad) * radius;
-			ctx.moveTo(x - xOffset, y - yOffset);
-			ctx.lineTo(x + xOffset, y + yOffset);
-			ctx.moveTo(x + yOffset, y - xOffset);
-			ctx.lineTo(x - yOffset, y + xOffset);
-			rad += QUARTER_PI;
-			xOffset = Math.cos(rad) * radius;
-			yOffset = Math.sin(rad) * radius;
-			ctx.moveTo(x - xOffset, y - yOffset);
-			ctx.lineTo(x + xOffset, y + yOffset);
-			ctx.moveTo(x + yOffset, y - xOffset);
-			ctx.lineTo(x - yOffset, y + xOffset);
+			ctx.moveTo(0, radius);
+			ctx.lineTo(0, -radius);
+			ctx.moveTo(-radius, 0);
+			ctx.lineTo(radius, 0);
+			xOffset = Math.cos(Math.PI / 4) * radius;
+			yOffset = Math.sin(Math.PI / 4) * radius;
+			ctx.moveTo(-xOffset, -yOffset);
+			ctx.lineTo(xOffset, yOffset);
+			ctx.moveTo(-xOffset, yOffset);
+			ctx.lineTo(xOffset, -yOffset);
 			break;
 		case 'line':
-			xOffset = Math.cos(rad) * radius;
-			yOffset = Math.sin(rad) * radius;
-			ctx.moveTo(x - xOffset, y - yOffset);
-			ctx.lineTo(x + xOffset, y + yOffset);
+			ctx.moveTo(-radius, 0);
+			ctx.lineTo(radius, 0);
 			break;
 		case 'dash':
-			ctx.moveTo(x, y);
-			ctx.lineTo(x + Math.cos(rad) * radius, y + Math.sin(rad) * radius);
+			ctx.moveTo(0, 0);
+			ctx.lineTo(radius, 0);
 			break;
 		}
 
 		ctx.fill();
 		ctx.stroke();
-	},
-
-	/**
-	 * Returns true if the point is inside the rectangle
-	 * @param {object} point - The point to test
-	 * @param {object} area - The rectangle
-	 * @returns {boolean}
-	 * @private
-	 */
-	_isPointInArea: function(point, area) {
-		var epsilon = 1e-6; // 1e-6 is margin in pixels for accumulated error.
-
-		return point.x > area.left - epsilon && point.x < area.right + epsilon &&
-			point.y > area.top - epsilon && point.y < area.bottom + epsilon;
+		ctx.restore();
 	},
 
 	clipArea: function(ctx, area) {
@@ -198,13 +160,8 @@ var exports = {
 	},
 
 	lineTo: function(ctx, previous, target, flip) {
-		var stepped = target.steppedLine;
-		if (stepped) {
-			if (stepped === 'middle') {
-				var midpoint = (previous.x + target.x) / 2.0;
-				ctx.lineTo(midpoint, flip ? target.y : previous.y);
-				ctx.lineTo(midpoint, flip ? previous.y : target.y);
-			} else if ((stepped === 'after' && !flip) || (stepped !== 'after' && flip)) {
+		if (target.steppedLine) {
+			if ((target.steppedLine === 'after' && !flip) || (target.steppedLine !== 'after' && flip)) {
 				ctx.lineTo(previous.x, target.y);
 			} else {
 				ctx.lineTo(target.x, previous.y);
@@ -227,8 +184,6 @@ var exports = {
 			target.y);
 	}
 };
-
-module.exports = exports;
 
 // DEPRECATIONS
 

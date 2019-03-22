@@ -1,5 +1,5 @@
 describe('Chart.elements.Point', function() {
-	describe('auto', jasmine.fixture.specs('element.point'));
+	describe('auto', jasmine.specsFromFixtures('element.point'));
 
 	it ('Should be constructed', function() {
 		var point = new Chart.elements.Point({
@@ -125,11 +125,20 @@ describe('Chart.elements.Point', function() {
 			name: 'setFillStyle',
 			args: ['rgba(0,0,0,0.1)']
 		}, {
+			name: 'save',
+			args: []
+		}, {
+			name: 'translate',
+			args: [10, 15]
+		}, {
+			name: 'rotate',
+			args: [0]
+		}, {
 			name: 'beginPath',
 			args: []
 		}, {
 			name: 'arc',
-			args: [10, 15, 2, 0, 2 * Math.PI]
+			args: [0, 0, 2, 0, 2 * Math.PI]
 		}, {
 			name: 'closePath',
 			args: [],
@@ -138,6 +147,9 @@ describe('Chart.elements.Point', function() {
 			args: [],
 		}, {
 			name: 'stroke',
+			args: []
+		}, {
+			name: 'restore',
 			args: []
 		}]);
 	});
