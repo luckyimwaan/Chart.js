@@ -1,5 +1,5 @@
 'use strict';
-
+// newChart
 var defaults = require('./core.defaults');
 var Element = require('./core.element');
 var helpers = require('../helpers/index');
