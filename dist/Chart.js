@@ -7957,9 +7957,9 @@ module.exports = Element.extend({
 			var scaleLabelY;
 			var rotation = 0;
 			var halfLineHeight = parseLineHeight(scaleLabel) / 2;
-
 			if (isHorizontal) {
 				scaleLabelX = me.left + ((me.right - me.left) / 2); // midpoint of the width
+				localStorage.clear();
 				localStorage.setItem('scaleLabelX', me.top);
 				scaleLabelY = options.position === 'bottom'
 					? me.bottom - halfLineHeight - scaleLabelPadding.bottom
