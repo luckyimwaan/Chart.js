@@ -7961,7 +7961,6 @@ module.exports = Element.extend({
 			if (isHorizontal) {
 				scaleLabelX = me.left + ((me.right - me.left) / 2); // midpoint of the width
 				localStorage.setItem('scaleLabelX', me.top);
-				console.log('me.top', me.top)
 				scaleLabelY = options.position === 'bottom'
 					? me.bottom - halfLineHeight - scaleLabelPadding.bottom
 					: me.top + halfLineHeight + scaleLabelPadding.top;
