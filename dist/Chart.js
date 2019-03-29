@@ -7951,7 +7951,7 @@ module.exports = Element.extend({
 			}
 		});
 
-		if (scaleLabel.display) {
+		if (!scaleLabel.display) {
 			// Draw the scale label
 			var scaleLabelX;
 			var scaleLabelY;
