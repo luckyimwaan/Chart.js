@@ -881,14 +881,11 @@ module.exports = Element.extend({
 			var halfLineHeight = parseLineHeight(scaleLabel) / 2;
 
 			if (isHorizontal) {
-				localStorage.setItem('scaleLabelX', me.top);
-				console.log('me.top', me.top)
 				scaleLabelX = me.left + ((me.right - me.left) / 2); // midpoint of the width
 				scaleLabelY = options.position === 'bottom'
 					? me.bottom - halfLineHeight - scaleLabelPadding.bottom
 					: me.top + halfLineHeight + scaleLabelPadding.top;
 			} else {
-				localStorage.setItem('scaleLabelY', me.top);
 				var isLeft = options.position === 'left';
 				scaleLabelX = isLeft
 					? me.left + halfLineHeight + scaleLabelPadding.top
